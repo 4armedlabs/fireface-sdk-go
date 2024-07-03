@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -16,6 +17,7 @@ type client struct {
 	baseURL    string
 	jwksURL    string
 	keySet     jwk.Set
+	logger     *slog.Logger
 }
 
 type Client struct {
@@ -29,6 +31,7 @@ type AuthConfig struct {
 	SecretKey string
 	Opts      []AuthClientOption
 	Version   string
+	Logger    *slog.Logger
 }
 
 func NewClient(ctx context.Context, config *AuthConfig) (*Client, error) {
@@ -58,6 +61,7 @@ func NewClient(ctx context.Context, config *AuthConfig) (*Client, error) {
 	}
 
 	baseClient.keySet = keySet
+	baseClient.logger = config.Logger
 
 	for _, opt := range config.Opts {
 		opt(baseClient)
@@ -80,6 +84,7 @@ type DecodedIdToken struct {
 func (c *Client) VerifyIDToken(ctx context.Context, idToken string) (DecodedIdToken, error) {
 	var decodedIdToken DecodedIdToken
 
+	c.logger.Debug("verifying ID token", "idToken", idToken, "jwksURL", c.jwksURL)
 	parsedToken, err := jwt.Parse([]byte(idToken), jwt.WithKeySet(c.keySet))
 	if err != nil {
 		return decodedIdToken, err

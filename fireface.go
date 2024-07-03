@@ -2,6 +2,8 @@ package fireface
 
 import (
 	"context"
+	"log/slog"
+	"os"
 
 	"github.com/4armedlabs/fireface-sdk-go/auth"
 )
@@ -18,6 +20,7 @@ type Option func(*App)
 type App struct {
 	serverURL string
 	opts      []Option
+	logger    *slog.Logger
 }
 
 func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
@@ -38,11 +41,28 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 		opt(app)
 	}
 
+	if app.logger == nil {
+		logOptions := &slog.HandlerOptions{}
+		if os.Getenv("FIREFACE_DEBUG") == "true" {
+			logOptions.Level = slog.LevelDebug
+			logOptions.AddSource = true
+		}
+
+		logger := slog.New(slog.NewJSONHandler(os.Stdout, logOptions))
+		logger.With("service", "fireface-sdk-go")
+
+		app.logger = logger
+	}
+
 	return app, nil
 }
 
 func (a *App) Auth(ctx context.Context) (*auth.Client, error) {
-	return nil, nil
+	return auth.NewClient(ctx, &auth.AuthConfig{
+		BaseURL: a.serverURL,
+		Version: Version,
+		Logger:  a.logger,
+	})
 }
 
 func getConfigDefaults() (*Config, error) {
