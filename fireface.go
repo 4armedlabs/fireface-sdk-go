@@ -9,6 +9,7 @@ import (
 )
 
 const Version = "GitVersion"
+const DefaultServerURL = "https://fireface.4armedlabs.run"
 
 type Config struct {
 	// The URL of the Fireface server
@@ -34,6 +35,10 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if config.ServerURL == "" {
+		config.ServerURL = DefaultServerURL
 	}
 
 	app := &App{
@@ -73,6 +78,6 @@ func (a *App) Auth(ctx context.Context) (*auth.Client, error) {
 
 func getConfigDefaults() (*Config, error) {
 	return &Config{
-		ServerURL: "https://fireface.4armedlabs.run",
+		ServerURL: DefaultServerURL,
 	}, nil
 }
