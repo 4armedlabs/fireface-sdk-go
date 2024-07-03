@@ -54,7 +54,7 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 	if app.logger == nil {
 		logOptions := &slog.HandlerOptions{}
 		if os.Getenv("FIREFACE_DEBUG") == "true" {
-			slog.Info("debug logging enabled")
+			slog.Info("Fireface debug logging enabled")
 			logOptions.Level = slog.LevelDebug
 			logOptions.AddSource = true
 		}

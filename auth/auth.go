@@ -87,6 +87,7 @@ func (c *Client) VerifyIDToken(ctx context.Context, idToken string) (DecodedIdTo
 	c.logger.Debug("verifying ID token", "idToken", idToken, "jwksURL", c.jwksURL)
 	parsedToken, err := jwt.Parse([]byte(idToken), jwt.WithKeySet(c.keySet))
 	if err != nil {
+		c.logger.Error("failed to parse ID token", "error", err, "keySetLength", c.keySet.Len())
 		return decodedIdToken, err
 	}
 
