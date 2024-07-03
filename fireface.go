@@ -13,6 +13,9 @@ const Version = "GitVersion"
 type Config struct {
 	// The URL of the Fireface server
 	ServerURL string `json:"serverURL"`
+
+	// Secret key
+	SecretKey string `json:"secretKey"`
 }
 
 type Option func(*App)
@@ -21,6 +24,7 @@ type App struct {
 	serverURL string
 	opts      []Option
 	logger    *slog.Logger
+	secretKey string
 }
 
 func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
@@ -34,6 +38,7 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 
 	app := &App{
 		serverURL: config.ServerURL,
+		secretKey: config.SecretKey,
 		opts:      opts,
 	}
 
@@ -59,9 +64,10 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 
 func (a *App) Auth(ctx context.Context) (*auth.Client, error) {
 	return auth.NewClient(ctx, &auth.AuthConfig{
-		BaseURL: a.serverURL,
-		Version: Version,
-		Logger:  a.logger,
+		BaseURL:   a.serverURL,
+		Version:   Version,
+		Logger:    a.logger,
+		SecretKey: a.secretKey,
 	})
 }
 
