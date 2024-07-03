@@ -85,7 +85,7 @@ func (c *Client) VerifyIDToken(ctx context.Context, idToken string) (DecodedIdTo
 	var decodedIdToken DecodedIdToken
 
 	c.logger.Debug("verifying ID token", "idToken", idToken, "jwksURL", c.jwksURL)
-	parsedToken, err := jwt.Parse([]byte(idToken), jwt.WithKeySet(c.keySet))
+	parsedToken, err := jwt.ParseString(idToken, jwt.WithKeySet(c.keySet))
 	if err != nil {
 		if c.keySet.Len() == 0 {
 			c.logger.Error("key set is empty", "jwksURL", c.jwksURL)
