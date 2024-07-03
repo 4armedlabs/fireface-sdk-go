@@ -60,9 +60,7 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 		}
 
 		logger := slog.New(slog.NewJSONHandler(os.Stdout, logOptions))
-		logger.With("service", "fireface-sdk-go")
-
-		app.logger = logger
+		app.logger = logger.With("service", "fireface-sdk-go")
 	}
 
 	return app, nil
