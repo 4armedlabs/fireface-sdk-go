@@ -2,7 +2,6 @@ package fireface
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/4armedlabs/fireface-sdk-go/auth"
 )
@@ -17,9 +16,8 @@ type Config struct {
 type Option func(*App)
 
 type App struct {
-	serverURL  string
-	httpClient *http.Client
-	opts       []Option
+	serverURL string
+	opts      []Option
 }
 
 func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
@@ -32,9 +30,8 @@ func NewApp(ctx context.Context, config *Config, opts ...Option) (*App, error) {
 	}
 
 	app := &App{
-		serverURL:  config.ServerURL,
-		httpClient: &http.Client{},
-		opts:       opts,
+		serverURL: config.ServerURL,
+		opts:      opts,
 	}
 
 	for _, opt := range opts {
