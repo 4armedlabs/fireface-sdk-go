@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 type client struct {
@@ -14,7 +15,7 @@ type client struct {
 	httpClient *http.Client
 	baseURL    string
 	jwksURL    string
-	jwksCache  *jwk.Cache
+	keySet     jwk.Set
 }
 
 type Client struct {
@@ -51,12 +52,12 @@ func NewClient(ctx context.Context, config *AuthConfig) (*Client, error) {
 	jwksCache.Register(baseClient.jwksURL, jwk.WithMinRefreshInterval(5*time.Minute))
 
 	// Refresh the cache immediately to populate
-	_, err := jwksCache.Refresh(ctx, baseClient.jwksURL)
+	keySet, err := jwksCache.Refresh(ctx, baseClient.jwksURL)
 	if err != nil {
 		return nil, err
 	}
 
-	baseClient.jwksCache = jwksCache
+	baseClient.keySet = keySet
 
 	for _, opt := range config.Opts {
 		opt(baseClient)
@@ -68,16 +69,38 @@ func NewClient(ctx context.Context, config *AuthConfig) (*Client, error) {
 }
 
 type DecodedIdToken struct {
-	Email         *string `json:"email,omitempty"`
-	EmailVerified *bool   `json:"email_verified,omitempty"`
-	Exp           *int64  `json:"exp,omitempty"`
-	Iat           *int64  `json:"iat,omitempty"`
-	Iss           *string `json:"iss,omitempty"`
-	Sub           *string `json:"sub,omitempty"`
+	Email         *string   `json:"email,omitempty"`
+	EmailVerified *bool     `json:"email_verified,omitempty"`
+	Exp           time.Time `json:"exp,omitempty"`
+	Iat           time.Time `json:"iat,omitempty"`
+	Iss           string    `json:"iss,omitempty"`
+	Sub           string    `json:"sub,omitempty"`
 }
 
 func (c *Client) VerifyIDToken(ctx context.Context, idToken string) (DecodedIdToken, error) {
-	return DecodedIdToken{}, nil
+	var decodedIdToken DecodedIdToken
+
+	parsedToken, err := jwt.Parse([]byte(idToken), jwt.WithKeySet(c.keySet))
+	if err != nil {
+		return decodedIdToken, err
+	}
+
+	if email, ok := parsedToken.Get("email"); ok {
+		e := email.(string)
+		decodedIdToken.Email = &e
+	}
+
+	if emailVerified, ok := parsedToken.Get("email_verified"); ok {
+		ev := emailVerified.(bool)
+		decodedIdToken.EmailVerified = &ev
+	}
+
+	decodedIdToken.Exp = parsedToken.Expiration()
+	decodedIdToken.Iat = parsedToken.IssuedAt()
+	decodedIdToken.Iss = parsedToken.Issuer()
+	decodedIdToken.Sub = parsedToken.Subject()
+
+	return decodedIdToken, nil
 }
 
 type HttpClientOption func(*http.Client)
