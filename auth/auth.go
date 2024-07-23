@@ -2,22 +2,24 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/4armedlabs/fireface-sdk-go/api"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 type client struct {
-	secretKey  string
-	httpClient *http.Client
-	baseURL    string
-	jwksURL    string
-	keySet     jwk.Set
-	logger     *slog.Logger
+	secretKey string
+	apiClient *api.Client
+	baseURL   string
+	jwksURL   string
+	keySet    jwk.Set
+	logger    *slog.Logger
 }
 
 type Client struct {
@@ -49,7 +51,14 @@ func NewClient(ctx context.Context, config *AuthConfig) (*Client, error) {
 	baseClient.baseURL = config.BaseURL
 	baseClient.jwksURL = config.BaseURL + "/.well-known/jwks.json"
 
-	baseClient.httpClient = newHTTPClient()
+	httpClient := newHTTPClient()
+
+	apiClient, err := api.NewClient(config.BaseURL, api.WithHTTPClient(httpClient))
+	if err != nil {
+		return nil, err
+	}
+
+	baseClient.apiClient = apiClient
 
 	jwksCache := jwk.NewCache(ctx)
 	jwksCache.Register(baseClient.jwksURL, jwk.WithMinRefreshInterval(5*time.Minute))
@@ -116,6 +125,41 @@ func (c *Client) VerifyIDToken(ctx context.Context, idToken string) (DecodedIdTo
 	decodedIdToken.Sub = parsedToken.Subject()
 
 	return decodedIdToken, nil
+}
+
+type UserToUpdate struct {
+	ID       string
+	Email    string
+	Password *string
+}
+
+type User struct {
+	ID        string
+	Email     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (c *Client) UpdateUser(ctx context.Context, userToUpdate *UserToUpdate) (*User, error) {
+	resp, err := c.apiClient.PutAuthUsersId(ctx, userToUpdate.ID, api.PutAuthUsersIdJSONRequestBody{
+		Password: userToUpdate.Password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	user := api.User{}
+	err = json.NewDecoder(resp.Body).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &User{
+		ID:        *user.Id,
+		Email:     user.Email,
+		CreatedAt: time.Unix(user.CreatedAt, 0),
+		UpdatedAt: time.Unix(user.UpdatedAt, 0),
+	}, nil
 }
 
 type HttpClientOption func(*http.Client)
